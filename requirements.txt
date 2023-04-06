@@ -1,0 +1,7 @@
+pandas
+matplotlib
+streamlit
+requests
+python-dotenv
+folium
+sqlalchemy
