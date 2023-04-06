@@ -6,11 +6,8 @@ conn = sqlite3.connect('SNCF_LOST.db')
 c = conn.cursor()
 
 # création de la table Objet
-c.execute('''CREATE TABLE IF NOT EXISTS ObjetPerdu
-             (id INTEGER PRIMARY KEY,
-             TypeObjet TEXT,
-             Date TEXT,
-             Status TEXT)''')
+c.execute('''DELETE FROM ObjetPerdu WHERE AnneePerte = 2021;
+''')
 
 conn.commit()
 conn.close()
