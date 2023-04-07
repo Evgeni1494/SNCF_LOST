@@ -5,3 +5,5 @@ requests
 python-dotenv
 folium
 sqlalchemy
+plotly
+streamlit-folium
