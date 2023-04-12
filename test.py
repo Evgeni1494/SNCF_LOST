@@ -104,10 +104,11 @@ for i, row in df_gare.iterrows():
             icon=folium.Icon(color='red')
         )
         marker.add_to(m)
-    
 
-    # Afficher la carte
-    st.write(m)
+# Étape 7: Afficher la carte en utilisant la méthode "IFrame" de Streamlit
+map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
+st.components.v1.html(map_html, width=800, height=600, scrolling=True)
+
 
 
 
