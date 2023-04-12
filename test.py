@@ -45,8 +45,6 @@ GROUP BY Semaine
 # Récupération des données dans un DataFrame pandas
 df = pd.read_sql_query(query, conn)
 
-# Création du graphique avec Plotly
-fig = px.histogram(df, x="Semaine", y="NbObjets", nbins=len(df), width=1000, height=500)
 
 # Affichage du graphique avec Streamlit
 st.plotly_chart(fig, use_container_width=True)
@@ -56,6 +54,14 @@ df_gare = pd.read_sql_query("SELECT * from Gare", conn)
 
 # Étape 3: Récupérer les données de la table "ObjetPerdu"
 df_objet = pd.read_sql_query("SELECT * from ObjetPerdu", conn)
+
+
+# Sélectionner la gare et l'année
+nom_gare = st.selectbox("Sélectionner une gare", df_gare["Nom"].unique())
+annee = st.selectbox("Sélectionner une année", ["2019", "2020", "2021", "2022"])
+
+# Création du graphique avec Plotly
+fig = px.histogram(df, x="Semaine", y="NbObjets", nbins=len(df), width=1000, height=500)
 
 # Étape 4: Créer une carte folium centrée sur Paris
 #m = folium.Map(location=[48.8566, 2.3522], zoom_start=12)
@@ -98,9 +104,6 @@ map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().rend
 
 
 
-# Sélectionner la gare et l'année
-nom_gare = st.selectbox("Sélectionner une gare", df_gare["Nom"].unique())
-annee = st.selectbox("Sélectionner une année", ["2019", "2020", "2021", "2022"])
 
 # Filtrer les données d'objet pour la gare et l'année sélectionnées
 df_objet_filtre = df_objet[(df_objet['GarePerte'] == nom_gare) & (df_objet['AnneePerte'] == annee)]
@@ -142,10 +145,10 @@ else:
     if freq_2022 is not None:
         st.write(" - En 2022 : {} voyages".format(freq_2022))
 
-        
+
 # Étape 7: Afficher la carte en utilisant la méthode "IFrame" de Streamlit
-#map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
 st.components.v1.html(map_html, width=800, height=600, scrolling=True)
+
 
 marker = folium.Marker(
     location=[latitude, longitude],
