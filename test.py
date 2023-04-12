@@ -54,61 +54,52 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 
-import sqlite3
-import pandas as pd
-import folium
 import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import sqlite3
 
-# Étape 1: Importer les bibliothèques nécessaires
-
-# Étape 2: Récupérer les données de la table "Gare"
 conn = sqlite3.connect('/home/apprenant/Documents/DEV_IA/SNCF_BRIEF/SNCF_LOST/SNCF_LOST.db')
-df_gare = pd.read_sql_query("SELECT * from Gare", conn)
+objet_perdu = pd.read_sql_query("SELECT * from ObjetPerdu", conn)
+gare = pd.read_sql_query("SELECT * from Gare", conn)
 
-# Étape 3: Récupérer les données de la table "ObjetPerdu"
-df_objet = pd.read_sql_query("SELECT * from ObjetPerdu", conn)
+merged_data = pd.merge(objet_perdu, gare, left_on='GarePerte', right_on='Nom')
 
-# Étape 4: Créer une carte folium centrée sur Paris
-m = folium.Map(location=[48.8566, 2.3522], zoom_start=12)
+fig = go.Figure()
 
-# Étape 5: Calculer le nombre total d'objets perdus pour chaque gare
-for i, row in df_gare.iterrows():
-    nom_gare = row['Nom']
-    freq_2019 = row['Freq_2019']
-    freq_2020 = row['Freq_2020']
-    freq_2021 = row['Freq_2021']
-    freq_2022 = row['Freq_2022']
-    longitude = row['Longitude']
-    latitude = row['Latitude']
-    
-    objets_par_gare = {}
-    for annee in ['2019', '2020', '2021', '2022']:
-        objets_par_gare[annee] = {}
-        for objet in df_objet['TypeObjet'].unique():
-            objets_par_gare[annee][objet] = df_objet[(df_objet['GarePerte'] == nom_gare) & (df_objet['AnneePerte'] == annee) & (df_objet['TypeObjet'] == objet)].shape[0]
-    
-    # Étape 6: Ajouter un marqueur à la carte pour chaque gare
-    if st.sidebar.checkbox(nom_gare):
-        if st.sidebar.checkbox('Afficher le nombre d\'objets trouvés par année'):
-            for annee in objets_par_gare.keys():
-                st.sidebar.write('Année : ', annee)
-                for objet in objets_par_gare[annee].keys():
-                    st.sidebar.write(objet, ':', objets_par_gare[annee][objet])
-        else:
-            freq = freq_2022
-            st.sidebar.write('Fréquence en 2022:', freq)
-            
-        marker = folium.Marker(
-            location=[latitude, longitude],
-            popup=nom_gare + ': ' + str(freq),
-            icon=folium.Icon(color='red')
+for year in merged_data['AnneePerte'].unique():
+    for objet in merged_data['TypeObjet'].unique():
+        filtered_data = merged_data[(merged_data['AnneePerte']==year) & (merged_data['TypeObjet']==objet)]
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=filtered_data['Latitude'],
+                lon=filtered_data['Longitude'],
+                mode='markers',
+                marker=go.scattermapbox.Marker(
+                    size=filtered_data['Freq_'+year]/10,
+                    # color=filtered_data['GarePerte'],
+                    colorscale='viridis',
+                    opacity=0.7,
+                    showscale=True
+                ),
+                text=filtered_data['Nom'] + '<br>' + 'Fréquentation en '+ year + ': ' + filtered_data['Freq_'+year].astype(str),
+                hoverinfo='text'
+            )
         )
-        marker.add_to(m)
 
-# Étape 7: Afficher la carte en utilisant la méthode "IFrame" de Streamlit
-map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
-st.components.v1.html(map_html, width=800, height=600, scrolling=True)
+fig.update_layout(
+    mapbox=dict(
+        accesstoken='your_mapbox_token',
+        center=dict(
+            lat=48.856614,
+            lon=2.3522219
+        ),
+        zoom=10
+    ),
+    title='Objets perdus dans les gares de Paris',
+)
 
+st.plotly_chart(fig)
 
 
 
