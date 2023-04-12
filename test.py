@@ -1,8 +1,9 @@
+import folium
 import sqlite3
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-from datetime import datetime, timedelta
+#from datetime import datetime, timedelta
 
 # Se connecter à la base de données
 conn = sqlite3.connect('SNCF_LOST.db')
@@ -29,9 +30,9 @@ fig.update_layout(title="Répartition du nombre d'objets trouvés par semaine en
 st.plotly_chart(fig)
 
 
-# Connexion à la base de données
-conn = sqlite3.connect('SNCF_LOST.db')
-cur = conn.cursor()
+# # Connexion à la base de données
+# conn = sqlite3.connect('SNCF_LOST.db')
+# cur = conn.cursor()
 
 # Requête SQL pour récupérer le nombre d'objets trouvés par semaine
 query = """
@@ -50,65 +51,106 @@ fig = px.histogram(df, x="Semaine", y="NbObjets", nbins=len(df), width=1000, hei
 # Affichage du graphique avec Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
-
-
-
-
-import sqlite3
-import pandas as pd
-import folium
-import streamlit as st
-
-# Étape 1: Importer les bibliothèques nécessaires
-
 # Étape 2: Récupérer les données de la table "Gare"
-conn = sqlite3.connect('/home/apprenant/Documents/DEV_IA/SNCF_BRIEF/SNCF_LOST/SNCF_LOST.db')
 df_gare = pd.read_sql_query("SELECT * from Gare", conn)
 
 # Étape 3: Récupérer les données de la table "ObjetPerdu"
 df_objet = pd.read_sql_query("SELECT * from ObjetPerdu", conn)
 
 # Étape 4: Créer une carte folium centrée sur Paris
-m = folium.Map(location=[48.8566, 2.3522], zoom_start=12)
+#m = folium.Map(location=[48.8566, 2.3522], zoom_start=12)
+map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
 
 # Étape 5: Calculer le nombre total d'objets perdus pour chaque gare
-for i, row in df_gare.iterrows():
-    nom_gare = row['Nom']
-    freq_2019 = row['Freq_2019']
-    freq_2020 = row['Freq_2020']
-    freq_2021 = row['Freq_2021']
-    freq_2022 = row['Freq_2022']
-    longitude = row['Longitude']
-    latitude = row['Latitude']
-    
-    objets_par_gare = {}
-    for annee in ['2019', '2020', '2021', '2022']:
-        objets_par_gare[annee] = {}
-        for objet in df_objet['TypeObjet'].unique():
-            objets_par_gare[annee][objet] = df_objet[(df_objet['GarePerte'] == nom_gare) & (df_objet['AnneePerte'] == annee) & (df_objet['TypeObjet'] == objet)].shape[0]
-    
-    # Étape 6: Ajouter un marqueur à la carte pour chaque gare
-    if st.sidebar.checkbox(nom_gare):
-        if st.sidebar.checkbox('Afficher le nombre d\'objets trouvés par année'):
-            for annee in objets_par_gare.keys():
-                st.sidebar.write('Année : ', annee)
-                for objet in objets_par_gare[annee].keys():
-                    st.sidebar.write(objet, ':', objets_par_gare[annee][objet])
-        else:
-            freq = freq_2022
-            st.sidebar.write('Fréquence en 2022:', freq)
-            
-        marker = folium.Marker(
-            location=[latitude, longitude],
-            popup=nom_gare + ': ' + str(freq),
-            icon=folium.Icon(color='red')
-        )
-        marker.add_to(m)
 
+# for i, row in df_gare.iterrows():
+#     nom_gare = row['Nom']
+#     freq_2019 = row['Freq_2019']
+#     freq_2020 = row['Freq_2020']
+#     freq_2021 = row['Freq_2021']
+#     freq_2022 = row['Freq_2022']
+#     longitude = row['Longitude']
+#     latitude = row['Latitude']
+    
+#     objets_par_gare = {}
+#     for annee in ['2019', '2020', '2021', '2022']:#
+#         objets_par_gare[annee] = {}
+#         for objet in df_objet['TypeObjet'].unique():
+#             objets_par_gare[annee][objet] = df_objet[(df_objet['GarePerte'] == nom_gare) & (df_objet['AnneePerte'] == annee) & (df_objet['TypeObjet'] == objet)].shape[0]
+    
+#     # Étape 6: Ajouter un marqueur à la carte pour chaque gare
+#     if st.sidebar.checkbox(nom_gare):
+#         if st.sidebar.checkbox('Afficher le nombre d\'objets trouvés par année'):
+#             for annee in objets_par_gare.keys():
+#                 st.sidebar.write('Année : ', annee)
+#                 for objet in objets_par_gare[annee].keys():
+#                     st.sidebar.write(objet, ':', objets_par_gare[annee][objet])
+#         else:
+#             freq = freq_2022
+#             st.sidebar.write('Fréquence en 2022:', freq)
+            
+#         marker = folium.Marker(
+#             location=[latitude, longitude],
+#             popup=nom_gare + ': ' + str(freq),
+#             icon=folium.Icon(color='red')
+#         )
+#         marker.add_to(m)
+
+
+
+# Sélectionner la gare et l'année
+nom_gare = st.selectbox("Sélectionner une gare", df_gare["Nom"].unique())
+annee = st.selectbox("Sélectionner une année", ["2019", "2020", "2021", "2022"])
+
+# Filtrer les données d'objet pour la gare et l'année sélectionnées
+df_objet_filtre = df_objet[(df_objet['GarePerte'] == nom_gare) & (df_objet['AnneePerte'] == annee)]
+
+# Vérifier si les données d'objet filtrées sont vides
+if df_objet_filtre.empty:
+    st.warning("Aucune donnée disponible pour la gare et l'année sélectionnées.")
+else:
+    # Calculer le nombre d'objets par type
+    objets_par_type = df_objet_filtre.groupby("TypeObjet").size().to_dict()
+
+    # Calculer les fréquences pour chaque année
+    freq_2019 = None
+    freq_2020 = None
+    freq_2021 = None
+    freq_2022 = None
+
+    if annee == "2019":
+        freq_2019 = df_gare[df_gare["Nom" ] == nom_gare]["Freq_2019"].values[0]
+    elif annee == "2020":
+        freq_2020 = df_gare[df_gare["Nom"] == nom_gare]["Freq_2020"].values[0]
+    elif annee == "2021":
+        freq_2021 = df_gare[df_gare["Nom"] == nom_gare]["Freq_2021"].values[0]
+    elif annee == "2022":
+        freq_2022 = df_gare[df_gare["Nom"] == nom_gare]["Freq_2022"].values[0]
+
+
+    # Afficher les résultats
+    st.write("Nombre d'objets par type pour la gare {} en {} :".format(nom_gare, annee))
+    st.write(objets_par_type)
+
+    st.write("Fréquence de la gare {} :".format(nom_gare))
+    if freq_2019 is not None:
+        st.write(" - En 2019 : {} voyages".format(freq_2019))
+    if freq_2020 is not None:
+        st.write(" - En 2020 : {} voyages".format(freq_2020))
+    if freq_2021 is not None:
+        st.write(" - En 2021 : {} voyages".format(freq_2021))
+    if freq_2022 is not None:
+        st.write(" - En 2022 : {} voyages".format(freq_2022))
+
+        
 # Étape 7: Afficher la carte en utilisant la méthode "IFrame" de Streamlit
-map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
+#map_html = folium.Map(location=[48.8566, 2.3522], zoom_start=12).get_root().render()
 st.components.v1.html(map_html, width=800, height=600, scrolling=True)
 
-
-
+marker = folium.Marker(
+    location=[latitude, longitude],
+    popup=nom_gare + ': ' + str("freq"),
+    icon=folium.Icon(color='red')
+    )
+marker.add_to(map_html)
 
