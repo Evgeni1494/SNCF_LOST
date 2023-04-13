@@ -22,7 +22,7 @@ def Objet_type_semaine():
     Returns:
     La fonction affiche l'histogramme des objets trouvés par semaine entre 2019 et 2022 pour chaque type d'objet sélectionné.
     """
-
+    conn = sqlite3.connect('SNCF_LOST.db')
     # Récupérer la liste des types d'objets disponibles dans la table "ObjetPerdu"
     types_objets = pd.read_sql_query("SELECT DISTINCT TypeObjet FROM ObjetPerdu", conn)['TypeObjet'].tolist()
 
@@ -61,7 +61,7 @@ def Objet_semaine():
     Returns:
     La fonction affiche l'histogramme du nombre d'objets trouvés par semaine entre 2019 et 2022.
     """
-
+    conn = sqlite3.connect('SNCF_LOST.db')
     # Requête SQL pour récupérer le nombre d'objets trouvés par semaine
     query = """
     SELECT strftime('%Y-%M-%W', Date) AS Semaine, COUNT(*) AS NbObjets
@@ -91,9 +91,13 @@ def Paris_map():
     en fonction de l'année et du type d'objet choisi par l'utilisateur.
 
     Returns:
-        folium.folium.Map: La carte générée par Folium.
-    """
+        folium.folium.Map:
+            La carte générée par Folium avec des marqueurs indiquant les gares où des objets perdus ont été trouvés,
+            en fonction de l'année et du type d'objet sélectionné.
 
+    """
+    conn = sqlite3.connect('SNCF_LOST.db')
+    
     # Récupération des données depuis la base de données
     query = "SELECT o.TypeObjet, o.Date, o.GarePerte, o.AnneePerte, g.Nom, g.Freq_2019, g.Freq_2020, g.Freq_2021, g.Freq_2022, g.Latitude, g.Longitude \
             FROM ObjetPerdu o \
@@ -112,18 +116,20 @@ def Paris_map():
     df_filtered = df[(df.AnneePerte == year) & (df.TypeObjet == obj_type)]
 
     # Calcul du nombre d'objets trouvés par gare en fonction de l'année.
-    df_filtered['NbObjets'] = df_filtered['AnneePerte'].apply(lambda x: 1)
-    df_filtered = df_filtered.groupby(['Nom', 'Latitude', 'Longitude'])['NbObjets'].sum().reset_index()
-    df_filtered.rename(columns={'NbObjets': 'NbObjetsTrouves'}, inplace=True)
+    df_filtered_grouped = df_filtered.groupby(['GarePerte']).count().reset_index()
+    df_filtered_grouped = df_filtered_grouped[['GarePerte', 'TypeObjet']]
+    df_filtered_grouped = df_filtered_grouped.rename(columns={'TypeObjet': 'NbObjets'})
+    df_filtered = df_filtered.merge(df_filtered_grouped, on='GarePerte', how='left')
 
+    
     # Création des marqueurs sur la carte
     for index, row in df_filtered.iterrows():
-        popup_text = "Gare : " + row['Nom'] + "<br>" + "Nombre d'objets trouvés : " + str(row['NbObjetsTrouves'])
+        popup_text = "Gare : " + row['Nom'] + "<br>" + "Fréquentation " + year + " : " + str(row['Freq_'+year]) + "<br>" + "Nombre de " + obj_type + " : " + str(row['NbObjets'])
         folium.Marker(location=[row['Latitude'], row['Longitude']], popup=popup_text).add_to(m)
 
     # Affichage de la carte sur Streamlit
     st.title("Carte des objets perdus dans les gares de Paris")
-    st.sidebar.title("Paramètres")
+    st.sidebar.title("Paramètres de la carte de Paris")
     st.sidebar.write("Année choisie :", year)
     st.sidebar.write("Type d'objet choisi :", obj_type)
     return folium_static(m)
@@ -145,6 +151,9 @@ def Temp_Objet():
     """
     # Requête SQL pour récupérer le nombre d'objets trouvés et la température moyenne
     # en joignant les tables "ObjetPerdu" et "Temperature" sur la colonne "Date"
+    conn = sqlite3.connect('SNCF_LOST.db')
+    cur = conn.cursor() 
+
     query = """
     SELECT Temperature.TempMed, COUNT(ObjetPerdu.id) AS count_objet
     FROM ObjetPerdu
@@ -181,6 +190,8 @@ def Saison_Objet_med():
     message : str
         Interpretation.
     """
+    conn = sqlite3.connect('SNCF_LOST.db')
+    cur = conn.cursor()
     # Requête SQL pour calculer la médiane du nombre d'objets trouvés par saison
     query = """
     SELECT CASE WHEN strftime('%m', ObjetPerdu.Date) IN ('12','01','02') THEN 'Hiver'
@@ -224,6 +235,8 @@ def Saison_type_objet():
         Interpretation.
     """
     # Requête SQL pour compter le nombre d'objets trouvés par saison et par type d'objet
+    conn = sqlite3.connect('SNCF_LOST.db')
+    cur = conn.cursor()
     query = """
     SELECT CASE WHEN strftime('%m', ObjetPerdu.Date) IN ('12','01','02') THEN 'Hiver'
                 WHEN strftime('%m', ObjetPerdu.Date) IN ('03','04','05') THEN 'Printemps'
