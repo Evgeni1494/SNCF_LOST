@@ -13,6 +13,16 @@ conn = sqlite3.connect('SNCF_LOST.db')
 cur = conn.cursor()
 
 def Objet_type_semaine():
+    """
+    Cette fonction récupère la liste des types d'objets disponibles dans la table "ObjetPerdu" 
+    et affiche une liste déroulante permettant de sélectionner les types d'objets à inclure dans l'histogramme. 
+    Elle calcule ensuite la somme des objets trouvés par semaine entre 2019 et 2022 pour chaque type d'objet sélectionné, 
+    filtre les données en fonction des types d'objets sélectionnés et affiche l'histogramme avec Plotly.
+
+    Returns:
+    La fonction affiche l'histogramme des objets trouvés par semaine entre 2019 et 2022 pour chaque type d'objet sélectionné.
+    """
+
     # Récupérer la liste des types d'objets disponibles dans la table "ObjetPerdu"
     types_objets = pd.read_sql_query("SELECT DISTINCT TypeObjet FROM ObjetPerdu", conn)['TypeObjet'].tolist()
 
@@ -43,6 +53,15 @@ def Objet_type_semaine():
 ########################################## Graphique Objets trouvé par semaine ##########################################
 
 def Objet_semaine():
+    """
+    Cette fonction récupère le nombre d'objets trouvés par semaine entre 2019 et 2022 dans la table "ObjetPerdu". 
+    Elle crée ensuite un histogramme avec Plotly pour représenter la répartition du nombre d'objets trouvés par semaine. 
+    Enfin, elle affiche l'histogramme à l'aide de Streamlit.
+
+    Returns:
+    La fonction affiche l'histogramme du nombre d'objets trouvés par semaine entre 2019 et 2022.
+    """
+
     # Requête SQL pour récupérer le nombre d'objets trouvés par semaine
     query = """
     SELECT strftime('%Y-%M-%W', Date) AS Semaine, COUNT(*) AS NbObjets
@@ -67,6 +86,14 @@ def Objet_semaine():
 
 ############################################## GARES DE PARIS AVEC FREQUENTATION ET NOMBRE D'OBJETS TROUVE ##################
 def Paris_map():
+    """
+    Affiche une carte de Paris avec des marqueurs pour chaque gare où des objets perdus ont été trouvés,
+    en fonction de l'année et du type d'objet choisi par l'utilisateur.
+
+    Returns:
+        folium.folium.Map: La carte générée par Folium.
+    """
+
     # Récupération des données depuis la base de données
     query = "SELECT o.TypeObjet, o.Date, o.GarePerte, o.AnneePerte, g.Nom, g.Freq_2019, g.Freq_2020, g.Freq_2021, g.Freq_2022, g.Latitude, g.Longitude \
             FROM ObjetPerdu o \
@@ -105,6 +132,17 @@ def Paris_map():
 
 
 def Temp_Objet():
+    """
+    Cette fonction récupère depuis une base de données SQL le nombre d'objets trouvés et la température moyenne, 
+    en joignant les tables "ObjetPerdu" et "Temperature" sur la colonne "Date".
+    
+    Elle crée ensuite un scatterplot avec Seaborn pour représenter graphiquement la corrélation entre 
+    le nombre d'objets trouvés et la température moyenne.
+
+    Returns:
+    - Le scatterplot créé avec Seaborn.
+    - Une intérpretation.
+    """
     # Requête SQL pour récupérer le nombre d'objets trouvés et la température moyenne
     # en joignant les tables "ObjetPerdu" et "Temperature" sur la colonne "Date"
     query = """
@@ -133,6 +171,16 @@ def Temp_Objet():
     return st.pyplot(fig), st.write(" D'après le graphique le nombre d'objets perdus semble corrélé a la temperature. On peut voir que la distribution suit la loi normale.")
 
 def Saison_Objet_med():
+    """
+    Calcule la médiane du nombre d'objets trouvés par saison et affiche un boxplot avec les résultats.
+    
+    Returns:
+    -------
+    fig : objet matplotlib.pyplot
+        Boxplot représentant la distribution des nombres d'objets trouvés par saison.
+    message : str
+        Interpretation.
+    """
     # Requête SQL pour calculer la médiane du nombre d'objets trouvés par saison
     query = """
     SELECT CASE WHEN strftime('%m', ObjetPerdu.Date) IN ('12','01','02') THEN 'Hiver'
@@ -165,6 +213,16 @@ def Saison_Objet_med():
 
 
 def Saison_type_objet():
+    """
+    Compte le nombre d'objets trouvés par saison et par type d'objet, affiche un graphique barres avec les résultats.
+
+    Returns:
+    -------
+    fig : objet matplotlib.pyplot
+        Graphique représentant la distribution des nombres d'objets trouvés par saison pour un type d'objet donné.
+    message : str
+        Interpretation.
+    """
     # Requête SQL pour compter le nombre d'objets trouvés par saison et par type d'objet
     query = """
     SELECT CASE WHEN strftime('%m', ObjetPerdu.Date) IN ('12','01','02') THEN 'Hiver'
